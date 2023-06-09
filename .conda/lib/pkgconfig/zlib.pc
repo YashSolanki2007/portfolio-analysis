@@ -1,0 +1,13 @@
+prefix=/Users/yashsolanki/Desktop/portfolio-analysis/.conda
+exec_prefix=/Users/yashsolanki/Desktop/portfolio-analysis/.conda
+libdir=/Users/yashsolanki/Desktop/portfolio-analysis/.conda/lib
+sharedlibdir=/Users/yashsolanki/Desktop/portfolio-analysis/.conda/lib
+includedir=/Users/yashsolanki/Desktop/portfolio-analysis/.conda/include
+
+Name: zlib
+Description: zlib compression library
+Version: 1.2.13
+
+Requires:
+Libs: -L${libdir} -L${sharedlibdir} -lz
+Cflags: -I${includedir}
