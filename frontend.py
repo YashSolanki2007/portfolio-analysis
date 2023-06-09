@@ -128,7 +128,7 @@ for i in range(len(annualized_sharpe_ratio)):
     st.write(
         f"{stocks[i]} has a annualized sharpe ratio of: {annualized_sharpe_ratio[i]}")
 
-
+st.title("")
 st.markdown("### Sortino Ratio for various portfolio assets")
 downside_volitality = log_returns[log_returns < 0].rolling(
     TRADING_DAYS, center=True, min_periods=10).std() * np.sqrt(TRADING_DAYS)
@@ -146,3 +146,19 @@ st.markdown("#### Annualized Sortino ratio for the stocks in the portfolio")
 for i in range(len(annualized_sharpe_ratio)):
     st.write(
         f"{stocks[i]} has a annualized sortino ratio of: {annualized_sortino_ratio[i]}")
+
+st.title("")
+st.markdown("### M2 Ratio for various portfolio assets")
+BENCHMARK = stocks[-1]
+benchmark_volitality = volitality[BENCHMARK]
+m2_ratios = pd.DataFrame()
+for i in log_returns.columns:
+    if i != BENCHMARK:
+        m2_ratio = sharpe_ratio[i] * benchmark_volitality + risk_free_return
+        m2_ratios[i] = m2_ratio
+fig = m2_ratios.plot.line(title=f"M2 Ratio of portfolio assets with {TRADING_DAYS} as period", labels={
+    "index": "Days",
+    "value": "M2 Ratio",
+    "variable": "Legend"
+})
+st.plotly_chart(fig, use_container_width=True)
