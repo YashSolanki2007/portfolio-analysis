@@ -162,3 +162,73 @@ fig = m2_ratios.plot.line(title=f"M2 Ratio of portfolio assets with {TRADING_DAY
     "variable": "Legend"
 })
 st.plotly_chart(fig, use_container_width=True)
+
+
+
+st.markdown("### Efficient Frontier for the portfolio")
+num_portfolios = int(st.text_input("Enter the number of portfolios to generate", value="1000"))
+
+num_assets = len(stocks)
+mean_returns = log_returns.mean()
+covariance_matrix = log_returns.cov()
+
+
+portfolio_weights = []
+portfolio_returns = []
+portfolio_volitality = []
+
+# returns_n = portfolio_df.pct_change()
+covariance_matrix = log_returns.cov()
+for portfolio in range(num_portfolios):
+    weights = np.random.random(num_assets)
+    weights = weights / np.sum(weights) # Ensure that the weights sum up to one
+    portfolio_weights.append(weights)
+    # Use portfolio expected return formula 
+    mean_returns = log_returns.mean()
+    returns = np.dot(mean_returns, weights)
+    portfolio_returns.append(returns)
+    portfolio_volitality.append(np.sqrt(
+        np.dot(weights.T, np.dot(log_returns.cov() * 252, weights.T))))
+    
+data = {'Returns': portfolio_returns, 'Volatility': portfolio_volitality}
+for counter, symbol in enumerate(portfolio_df.columns.tolist()):
+    data[symbol+' weight'] = [w[counter] for w in portfolio_weights]
+
+portfolios = pd.DataFrame(data)
+
+min_volitality_portfolio = min_vol_port = portfolios.iloc[portfolios['Volatility'].idxmin()]
+max_sharpe_ratio_portfolio = portfolios.iloc[((portfolios['Returns']-risk_free_return)/portfolios['Volatility']).idxmax()]
+
+portfolios_scatter = go.Scatter(x=portfolios['Volatility'] * 100, y=portfolios['Returns'] * 100, mode='markers', name='Portfolios along efficient frontier')
+min_volitality_portfolio_scatter = go.Scatter(
+    x=[min_volitality_portfolio[1] * 100], y=[min_volitality_portfolio[0] * 100], marker=dict(color='red', size=14, line=dict(width=3, color='black')), 
+    name='Minimum Volitality Portfolio')
+
+max_sharpe_ratio_portfolio_scatter = go.Scatter(
+    x=[max_sharpe_ratio_portfolio[1] * 100], y=[max_sharpe_ratio_portfolio[0] * 100], marker=dict(color='green', size=14, line=dict(width=3, color='black')), 
+    name='Maximum Sharpe Ratio Portfolio')
+
+data = [portfolios_scatter, min_volitality_portfolio_scatter,
+        max_sharpe_ratio_portfolio_scatter]
+layout = go.Layout(
+    title='Portfolio Optimisation with the Efficient Frontier',
+    yaxis=dict(title='Annualised Return (%)'),
+    xaxis=dict(title='Annualised Volatility (%)'),
+    showlegend=True,
+    legend=dict(
+        x=0.75, y=0, traceorder='normal',
+        bgcolor='#E2E2E2',
+        bordercolor='black',
+        borderwidth=2),
+    width=800,
+    height=600)
+fig = go.Figure(data=data, layout=layout)
+st.plotly_chart(fig, use_container_width=True)
+
+
+st.markdown("#### Information Regarding the efficient frontier")
+
+st.markdown("##### Minimum Volitality Portfolio Information")
+st.text(min_volitality_portfolio * 100)
+st.markdown("##### Maximum Sharpe Ratio Portfolio Information")
+st.text(max_sharpe_ratio_portfolio * 100)
