@@ -59,15 +59,17 @@ fig = portfolio_df.plot.line(title="Close prices of portfolio assets", labels={
 st.plotly_chart(fig, use_container_width=True)
 
 
-log_returns = []
-for i in portfolio_df.columns:
-    stock_log_returns = np.log(
-        portfolio_df[i]/portfolio_df[i].shift(1)).dropna().to_list()
-    log_returns.append(stock_log_returns)
+# log_returns = []
+# for i in portfolio_df.columns:
+#     stock_log_returns = np.log(
+#         portfolio_df[i]/portfolio_df[i].shift(1)).dropna().to_list()
+#     log_returns.append(stock_log_returns)
 
-log_returns = np.array(log_returns).T
-log_returns = pd.DataFrame(log_returns, columns=[
-                           i for i in portfolio_df.columns])
+log_returns = portfolio_df.pct_change()
+
+# log_returns = np.array(log_returns).T
+# log_returns = pd.DataFrame(log_returns, columns=[
+#                            i for i in portfolio_df.columns])
 
 
 st.markdown("### Log returns of portfolio assets")
