@@ -59,17 +59,15 @@ fig = portfolio_df.plot.line(title="Close prices of portfolio assets", labels={
 st.plotly_chart(fig, use_container_width=True)
 
 
-# log_returns = []
-# for i in portfolio_df.columns:
-#     stock_log_returns = np.log(
-#         portfolio_df[i]/portfolio_df[i].shift(1)).dropna().to_list()
-#     log_returns.append(stock_log_returns)
+log_returns = []
+for i in portfolio_df.columns:
+    stock_log_returns = np.log(
+        portfolio_df[i]/portfolio_df[i].shift(1)).dropna().to_list()
+    log_returns.append(stock_log_returns)
 
-log_returns = portfolio_df.pct_change()
-
-# log_returns = np.array(log_returns).T
-# log_returns = pd.DataFrame(log_returns, columns=[
-#                            i for i in portfolio_df.columns])
+log_returns = np.array(log_returns).T
+log_returns = pd.DataFrame(log_returns, columns=[
+                           i for i in portfolio_df.columns])
 
 
 st.markdown("### Log returns of portfolio assets")
@@ -179,15 +177,15 @@ portfolio_weights = []
 portfolio_returns = []
 portfolio_volitality = []
 
-# returns_n = portfolio_df.pct_change()
-covariance_matrix = log_returns.cov()
+returns_n = portfolio_df.pct_change()
+covariance_matrix = log_returns.cov() * 252
 for portfolio in range(num_portfolios):
     weights = np.random.random(num_assets)
     weights = weights / np.sum(weights) # Ensure that the weights sum up to one
     portfolio_weights.append(weights)
     # Use portfolio expected return formula 
-    mean_returns = log_returns.mean()
-    returns = np.dot(mean_returns, weights)
+    mean_returns = log_returns.mean() * 252
+    returns = np.sum(weights * mean_returns) 
     portfolio_returns.append(returns)
     portfolio_volitality.append(np.sqrt(
         np.dot(weights.T, np.dot(log_returns.cov() * 252, weights.T))))
