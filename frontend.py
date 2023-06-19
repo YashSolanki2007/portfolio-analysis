@@ -20,7 +20,7 @@ pd.options.plotting.backend = "plotly"
 st.title('Portfolio Analysis')
 st.markdown("Portfolio Analysis is a free tool that you can use to analyze and improve your portfolio.")
 
-stocks_inp = st.text_input('Enter tickers of the Portfolio seperated by commas', value='GOOG')
+stocks_inp = st.text_input('Enter tickers of the Portfolio seperated by commas with the benchmark as the last asset', value='GOOG')
 compute_period = int(st.text_input("Enter the time period that you want to track for", value="252"))
 
 
@@ -227,8 +227,12 @@ st.plotly_chart(fig, use_container_width=True)
 
 
 st.markdown("#### Information Regarding the efficient frontier")
+st.markdown("##### All the data given below is supposed to be interpreted as percentages(%)")
 
 st.markdown("##### Minimum Volitality Portfolio Information")
-st.text(min_volitality_portfolio * 100)
+min_volitality_portfolio_df = pd.DataFrame(min_volitality_portfolio[0:len(min_volitality_portfolio)] * 100)
+st.dataframe(min_volitality_portfolio_df)
+
+max_sharpe_ratio_portfolio_df = pd.DataFrame(max_sharpe_ratio_portfolio[0:len(max_sharpe_ratio_portfolio)] * 100)
 st.markdown("##### Maximum Sharpe Ratio Portfolio Information")
-st.text(max_sharpe_ratio_portfolio * 100)
+st.dataframe(max_sharpe_ratio_portfolio_df)
