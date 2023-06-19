@@ -177,15 +177,15 @@ portfolio_weights = []
 portfolio_returns = []
 portfolio_volitality = []
 
-# returns_n = portfolio_df.pct_change()
-covariance_matrix = log_returns.cov()
+returns_n = portfolio_df.pct_change()
+covariance_matrix = log_returns.cov() * 252
 for portfolio in range(num_portfolios):
     weights = np.random.random(num_assets)
     weights = weights / np.sum(weights) # Ensure that the weights sum up to one
     portfolio_weights.append(weights)
     # Use portfolio expected return formula 
-    mean_returns = log_returns.mean()
-    returns = np.dot(mean_returns, weights)
+    mean_returns = log_returns.mean() * 252
+    returns = np.sum(weights * mean_returns) 
     portfolio_returns.append(returns)
     portfolio_volitality.append(np.sqrt(
         np.dot(weights.T, np.dot(log_returns.cov() * 252, weights.T))))
