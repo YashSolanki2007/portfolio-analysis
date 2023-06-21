@@ -11,16 +11,19 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import matplotlib.pyplot as plt
 import seaborn as sns
+from fpdf import FPDF
+import base64
+from tempfile import NamedTemporaryFile
 
 
 pd.options.plotting.backend = "plotly"
-
+figures = []
 
 
 st.title('Portfolio Analysis')
 st.markdown("Portfolio Analysis is a free tool that you can use to analyze and improve your portfolio.")
 
-stocks_inp = st.text_input('Enter tickers of the Portfolio seperated by commas', value='GOOG')
+stocks_inp = st.text_input('Enter tickers of the Portfolio seperated by commas with the benchmark as the last asset', value='GOOG')
 compute_period = int(st.text_input("Enter the time period that you want to track for", value="252"))
 
 
@@ -57,7 +60,7 @@ fig = portfolio_df.plot.line(title="Close prices of portfolio assets", labels={
     "variable": "Legend"
 })
 st.plotly_chart(fig, use_container_width=True)
-
+figures.append(fig)
 
 log_returns = []
 for i in portfolio_df.columns:
@@ -75,6 +78,7 @@ for i in log_returns.columns:
     fig = log_returns[i].plot.hist(labels={"value": "Returns", "variable": "Legend", "count": "frequency"}, 
                                    title=f'Log returns of: {i}')
     st.plotly_chart(fig, use_container_width=True)
+    figures.append(fig)
 
 
 
@@ -83,6 +87,7 @@ for i in log_returns.columns:
     fig = log_returns[i].plot.box(labels={"value": "", "variable": i},
                                   title=f'Box and whisker plot of: {i}')
     st.plotly_chart(fig, use_container_width=True)
+    figures.append(fig)
 
 
 
@@ -92,7 +97,7 @@ fig = plt.figure()
 ax = sns.heatmap(correlation_matrix, annot=True)
 plt.title("Correlation Matrix for portfolio")
 st.pyplot(fig)
-
+figures.append(fig)
 
 st.markdown("### Volitality for the various portfolio assets")
 TRADING_DAYS = 60
@@ -105,6 +110,7 @@ fig = volitality.plot.line(title=f"Volitality of portfolio assets with {TRADING_
     "variable": "Legend"
 })
 st.plotly_chart(fig, use_container_width=True)
+figures.append(fig)
 
 
 st.markdown("### Sharpe Ratio for various portfolio assets")
@@ -122,6 +128,7 @@ fig = sharpe_ratio.plot.line(title=f"Sharpe Ratio of portfolio assets with {TRAD
     "variable": "Legend"
 })
 st.plotly_chart(fig, use_container_width=True)
+figures.append(fig)
 
 st.markdown("#### Annualized Sharpe ratio for the stocks in the portfolio")
 for i in range(len(annualized_sharpe_ratio)):
@@ -142,6 +149,8 @@ fig = sortino_ratio.plot.line(title=f"Sortino Ratio of portfolio assets with {TR
     "variable": "Legend"
 })
 st.plotly_chart(fig, use_container_width=True)
+figures.append(fig)
+
 st.markdown("#### Annualized Sortino ratio for the stocks in the portfolio")
 for i in range(len(annualized_sharpe_ratio)):
     st.write(
@@ -162,7 +171,7 @@ fig = m2_ratios.plot.line(title=f"M2 Ratio of portfolio assets with {TRADING_DAY
     "variable": "Legend"
 })
 st.plotly_chart(fig, use_container_width=True)
-
+figures.append(fig)
 
 
 st.markdown("### Efficient Frontier for the portfolio")
@@ -224,11 +233,264 @@ layout = go.Layout(
     height=600)
 fig = go.Figure(data=data, layout=layout)
 st.plotly_chart(fig, use_container_width=True)
+figures.append(fig)
 
 
 st.markdown("#### Information Regarding the efficient frontier")
+st.markdown("##### All the data given below is supposed to be interpreted as percentages(%)")
 
 st.markdown("##### Minimum Volitality Portfolio Information")
-st.text(min_volitality_portfolio * 100)
+min_volitality_portfolio_df = pd.DataFrame(min_volitality_portfolio[0:len(min_volitality_portfolio)] * 100)
+st.dataframe(min_volitality_portfolio_df)
+
+max_sharpe_ratio_portfolio_df = pd.DataFrame(max_sharpe_ratio_portfolio[0:len(max_sharpe_ratio_portfolio)] * 100)
 st.markdown("##### Maximum Sharpe Ratio Portfolio Information")
-st.text(max_sharpe_ratio_portfolio * 100)
+st.dataframe(max_sharpe_ratio_portfolio_df)
+
+
+# PDF Download Functionality
+def create_download_link(val, filename):
+    b64 = base64.b64encode(val)  # val looks like b'...'
+    return f'<a href="data:application/octet-stream;base64,{b64.decode()}" download="{filename}.pdf">Download file</a>'
+
+
+export_as_pdf = st.button("Export Report as PDF")
+
+# Download analytics report option 
+FONT_FAMILY = "Arial"
+WIDTH = 210
+HEIGHT = 297
+name = ""
+
+if export_as_pdf:
+    pdf = FPDF()
+    pdf.set_auto_page_break(True, margin=0.0)
+
+    # Main Page
+    pdf.add_page()
+    pdf.set_font(FONT_FAMILY, size=40)
+    pdf.ln(40)
+    pdf.multi_cell(w=0, h=8, txt=f"Portfolio Analysis report")
+
+
+    # First introduction page 
+    pdf.add_page()
+    pdf.set_font(FONT_FAMILY, size=40)
+    pdf.cell(0, txt="Introduction")
+    pdf.ln(15)
+    pdf.set_font(FONT_FAMILY, size=13)
+    pdf.multi_cell(w=0, h=5, txt=f"This technical report analyses the portfolio consisting the assets evaluated over a period of {compute_period} days: ")
+    pdf.ln(8)
+    pdf.set_font(FONT_FAMILY, size=13)
+    for index, stock in enumerate(stocks, 1):
+        pdf.cell(0, txt=f"{index}. {stock}")
+        pdf.ln(6)
+
+
+    # Second page close prices
+    pdf.add_page()
+    pdf.set_font(FONT_FAMILY, size=40)
+    pdf.cell(0, txt='Close Prices')
+    pdf.set_font(FONT_FAMILY, size=35)
+    with NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
+        figures[0].write_image(tmpfile.name)
+        name = tmpfile.name
+    pdf.image(name, x=5, y=20, w=WIDTH-20)
+    name = ""
+
+
+    pdf.ln(115)
+    pdf.set_font(FONT_FAMILY, size=13)
+
+
+    # Log returns page 
+    pdf.add_page()
+    pdf.set_font(FONT_FAMILY, size=40)
+    pdf.cell(0, txt='Log returns')
+    pdf.ln(15)
+    pdf.set_font(FONT_FAMILY, size=13)
+    pdf.multi_cell(w=0, h=7, txt="The Log returns can be used to understand whether the returns of each of the stocks of the portfolio is gaussian or not and also helps us understand the shape of the returns")
+    # Histogram of the log returns
+    y = 50
+    initial = 0
+    for i in range(len(stocks)):
+        with NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
+            ind = i + 1
+            figures[ind].write_image(tmpfile.name)        
+            name = tmpfile.name
+
+        with NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
+            ind2 = len(stocks) + 1 + i
+            figures[ind2].write_image(tmpfile.name)
+            name2 = tmpfile.name
+
+        # pdf.image(name, x=5, y=(50 * i) + 50, h=50)
+        # name = ""
+        temp = y
+        y = (50 * i) + 50
+
+        new_page = False
+        p1 = True
+        if temp >= 250 and temp % 250 == 0:
+            new_page = True
+            p1 = False
+        else:
+            new_page = False
+        if new_page:
+            initial = 0
+            pdf.add_page()
+            pdf.image(name, x=5, y=initial, h=50)
+            pdf.image(name2, x=100, y=initial, h=50)
+        else:
+            if p1:
+                initial += 50
+                pdf.image(name, x=5, y=initial, h=50)
+                pdf.image(name2, x=100, y=initial, h=50)
+            else:
+                pdf.image(name, x=100, y=initial, h=50)
+                pdf.image(name2, x=5, y=initial, h=50)
+                initial += 50
+
+        name = ""
+
+
+
+    # Correlation Matrix
+    pdf.add_page()
+    pdf.set_font(FONT_FAMILY, size=40)
+    pdf.cell(0, txt='Correlation Matrix')
+    pdf.ln(15)
+    pdf.set_font(FONT_FAMILY, size=13)
+    pdf.multi_cell(w=0, h=7, txt="The Correlation matrix tells us how the movement of one stock/asset in the portfolio affects the movement of another stock/asset in the portfolio.")
+    with NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
+        ind = 2 * len(stocks) + 1
+        figures[ind].savefig(tmpfile.name)
+        name = tmpfile.name
+    pdf.image(name, x=5, y=50, w=WIDTH-20)
+    name = ""
+
+    # Volitality 
+    pdf.add_page()
+    pdf.set_font(FONT_FAMILY, size=40)
+    pdf.cell(0, txt='Volitality')
+    pdf.ln(15)
+    pdf.set_font(FONT_FAMILY, size=13)
+    pdf.multi_cell(w=0, h=7, txt="The Volitality of a stock is an important thing to look at as it gives investors an idea about the risk assosciated with the invesment.")
+    with NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
+        ind = 2 * len(stocks) + 1 + 1
+        figures[ind].write_image(tmpfile.name)
+        name = tmpfile.name
+    pdf.image(name, x=5, y=50, w=WIDTH-20)
+    name = ""
+
+    # Sharpe Ratio 
+    pdf.add_page()
+    pdf.set_font(FONT_FAMILY, size=40)
+    pdf.cell(0, txt='Sharpe Ratio')
+    pdf.ln(15)
+    pdf.set_font(FONT_FAMILY, size=13)
+    pdf.multi_cell(w=0, h=7, txt='The Sharpe Ratio of a stock/asset tells us wheather the returns provided by an investment are worth the volitality. Investors consider a Sharpe ratio greater than 1 to be pretty good.')
+    with NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
+        ind = 2 * len(stocks) + 1 + 2
+        figures[ind].write_image(tmpfile.name)
+        name = tmpfile.name
+    pdf.image(name, x=5, y=50, w=WIDTH-20)
+    name = ""
+    pdf.ln(140)
+    pdf.set_font(FONT_FAMILY, size=20)
+    pdf.multi_cell(w=0, h=7, txt='The Annualized Sharpe Ratios for the assets in the portfolio is: ')
+    pdf.ln(13)
+    pdf.set_font(FONT_FAMILY, size=13)
+    for i in range(len(annualized_sharpe_ratio)):
+        pdf.cell(0, txt=f"The Annualized Sharpe Ratio for: {stocks[i]} is {annualized_sharpe_ratio[i]}")
+        pdf.ln(7)
+
+    # Sortino Ratio
+    pdf.add_page()
+    pdf.set_font(FONT_FAMILY, size=40)
+    pdf.cell(0, txt='Sortino Ratio')
+    pdf.ln(15)
+    pdf.set_font(FONT_FAMILY, size=13)
+    pdf.multi_cell(w=0, h=7, txt='The Sortino Ratio of a stock/asset is very similar to the Sharpe Ratio except it only considers downside volitality and ignores any upside volitality.')
+    with NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
+        ind = 2 * len(stocks) + 1 + 3
+        figures[ind].write_image(tmpfile.name)
+        name = tmpfile.name
+    pdf.image(name, x=5, y=50, w=WIDTH-20)
+    name = ""
+    pdf.ln(140)
+    pdf.set_font(FONT_FAMILY, size=20)
+    pdf.multi_cell(
+        w=0, h=7, txt='The Annualized Sortino Ratios for the assets in the portfolio is: ')
+    pdf.ln(13)
+    pdf.set_font(FONT_FAMILY, size=13)
+    for i in range(len(annualized_sortino_ratio)):
+        pdf.cell(
+            0, txt=f"The Annualized Sortino Ratio for: {stocks[i]} is {annualized_sortino_ratio[i]}")
+        pdf.ln(7)
+
+    # M2 Ratio 
+    pdf.add_page()
+    pdf.set_font(FONT_FAMILY, size=40)
+    pdf.cell(0, txt='M2 Ratio')
+    pdf.ln(15)
+    pdf.set_font(FONT_FAMILY, size=13)
+    pdf.multi_cell(w=0, h=7, txt='The M2 ratio measures the returns of the portfolio, adjusted for the risk of the portfolio relative to that of some benchmark.')
+    with NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
+        ind = 2 * len(stocks) + 1 + 4
+        figures[ind].write_image(tmpfile.name)
+        name = tmpfile.name
+    pdf.image(name, x=5, y=50, w=WIDTH-20)
+    name = ""
+
+    # Efficient-Frontier
+    pdf.add_page()
+    pdf.set_font(FONT_FAMILY, size=40)
+    pdf.cell(0, txt='Efficient Frontier')
+    pdf.ln(15)
+    pdf.set_font(FONT_FAMILY, size=13)
+    pdf.multi_cell(w=0, h=7, txt='The Efficient Frontier consists of several portfolios that are generated. The Optimal Risk to return portfolio is the one with the maximum Sharpe Ratio which is denoted by the green dot.')
+    with NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
+        ind = 2 * len(stocks) + 1 + 5
+        figures[ind].write_image(tmpfile.name)
+        name = tmpfile.name
+    pdf.image(name, x=5, y=50, w=WIDTH-20)
+    name = ""
+    pdf.ln(150)
+
+    pdf.set_font(FONT_FAMILY, size=23)
+    pdf.cell(0, txt='Minimum Volitality Portfolio Information')
+    pdf.ln(10)
+
+    pdf.set_font(FONT_FAMILY, size=13)
+    min_volitality_dict = min_volitality_portfolio_df.to_dict()
+    min_volitality_dict = min_volitality_dict[int(
+        list(min_volitality_dict.keys())[0])]
+    dict_keys = list(min_volitality_dict.keys())
+    dict_values = list(min_volitality_dict.values())
+    for i in range(len(min_volitality_dict)):
+        pdf.cell(w=0, h=10, txt=f"{dict_keys[i]}: \t \t \t {dict_values[i]}%", border=1)
+        pdf.ln(10)
+
+
+    pdf.ln(10)
+    pdf.set_font(FONT_FAMILY, size=23)
+    pdf.cell(0, txt='Max Sharpe Ratio Portfolio Information')
+    pdf.ln(10)
+
+    pdf.set_font(FONT_FAMILY, size=13)
+    max_sharpe_ratio_dict = max_sharpe_ratio_portfolio_df.to_dict()
+    max_sharpe_ratio_dict = max_sharpe_ratio_dict[
+        int(list(max_sharpe_ratio_dict.keys())[0])]
+    dict_keys = list(max_sharpe_ratio_dict.keys())
+    dict_values = list(max_sharpe_ratio_dict.values())
+    for i in range(len(max_sharpe_ratio_dict)):
+        pdf.cell(w=0, h=10, txt=f"{dict_keys[i]}: \t \t \t {dict_values[i]}%", border=1)
+        pdf.ln(10)
+
+
+    # Saving the pdf file do this in the end
+    html = create_download_link(pdf.output(
+        dest="S").encode("latin-1"), f"Portfolio Analysis")
+    st.markdown(html, unsafe_allow_html=True)
+    st.text("")
