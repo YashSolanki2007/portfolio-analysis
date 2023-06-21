@@ -9,3 +9,4 @@ plotly==5.12.0
 matplotlib == 3.3.2
 seaborn == 0.11.0
 yahoo-fin == 0.8.9.1
+fpdf == 1.7.2
