@@ -248,6 +248,50 @@ st.markdown("##### Maximum Sharpe Ratio Portfolio Information")
 st.dataframe(max_sharpe_ratio_portfolio_df)
 
 
+# Calculating the beta and the expected returns of the portfolio and the individual assets (with CAPM)
+benchmark_returns = log_returns[BENCHMARK]
+weights = [max_sharpe_ratio_portfolio[2:].to_list()]
+portfolio_returns = np.dot(weights, log_returns.T)
+portfolio_returns = np.reshape(portfolio_returns, (portfolio_returns.shape[1]))
+summed_portfolio_returns = np.sum(portfolio_returns) * 100
+
+# Max sharpe ratio portfolio beta
+portfolio_beta = pd.DataFrame(np.cov(portfolio_returns, benchmark_returns) / np.var(benchmark_returns))
+
+
+assets_beta = []
+for stock in stocks:
+    asset_returns = log_returns[stock]
+    asset_beta = np.cov(asset_returns, benchmark_returns) / np.var(benchmark_returns)
+    asset_beta = asset_beta[0][1]
+    assets_beta.append(asset_beta)
+
+portfolio_beta = pd.DataFrame(portfolio_beta)[0][1]
+# Assuming risk-free rate is 0
+portfolio_expected_returns = portfolio_beta * (max_sharpe_ratio_portfolio[0] * 100)
+
+assets_expected_returns = []
+for i in range(len(stocks)):
+    asset_expected_return = assets_beta[i] * ((log_returns[stocks[i]].mean() * 252) * 100)
+    assets_expected_returns.append(asset_expected_return)
+
+all_betas = assets_beta
+all_betas.append(portfolio_beta)
+cols = [i for i in stocks]
+cols.append("Portfolio")
+betas = pd.DataFrame([all_betas], columns=cols)
+betas = betas.T
+st.markdown("### Beta of the portfolio and each of it's stocks")
+st.markdown("#### Ignore the beta of the benchmark.")
+st.dataframe(betas)
+
+cumulative_expected_returns = assets_expected_returns
+cumulative_expected_returns.append(portfolio_expected_returns)
+capm_expected_returns_df = pd.DataFrame([cumulative_expected_returns], columns=cols)
+capm_expected_returns_df = capm_expected_returns_df.T
+st.markdown("### Expected annualized returns of the assets as well as the portfolio according to the CAPM")
+st.dataframe(capm_expected_returns_df)
+
 # PDF Download Functionality
 def create_download_link(val, filename):
     b64 = base64.b64encode(val)  # val looks like b'...'
@@ -473,7 +517,7 @@ if export_as_pdf:
         pdf.ln(10)
 
 
-    pdf.ln(10)
+    pdf.ln(30)
     pdf.set_font(FONT_FAMILY, size=23)
     pdf.cell(0, txt='Max Sharpe Ratio Portfolio Information')
     pdf.ln(10)
@@ -486,6 +530,40 @@ if export_as_pdf:
     dict_values = list(max_sharpe_ratio_dict.values())
     for i in range(len(max_sharpe_ratio_dict)):
         pdf.cell(w=0, h=10, txt=f"{dict_keys[i]}: \t \t \t {dict_values[i]}%", border=1)
+        pdf.ln(10)
+
+    pdf.add_page()
+    pdf.set_font(FONT_FAMILY, size=40)
+    pdf.cell(0, txt='Beta and CAPM')
+    pdf.ln(20)
+    pdf.set_font(FONT_FAMILY, size=23)
+    pdf.cell(0, txt='Portfolio beta information')
+    pdf.ln(10)
+    betas_dict = betas.to_dict()
+    betas_dict = betas_dict[
+        int(list(betas_dict.keys())[0])]
+    dict_keys = list(betas_dict.keys())
+    dict_values = list(betas_dict.values())
+    pdf.set_font(FONT_FAMILY, size=13)
+    for i in range(len(betas_dict)):
+        pdf.cell(
+            w=0, h=10, txt=f"{dict_keys[i]}: \t \t \t {dict_values[i]}%", border=1)
+        pdf.ln(10)
+    
+    pdf.ln(30)
+
+    pdf.set_font(FONT_FAMILY, size=23)
+    pdf.cell(0, txt='Portfolio percent returns with CAPM')
+    pdf.ln(10)
+    capm_dict = capm_expected_returns_df.to_dict()
+    capm_dict = capm_dict[
+        int(list(capm_dict.keys())[0])]
+    dict_keys = list(capm_dict.keys())
+    dict_values = list(capm_dict.values())
+    pdf.set_font(FONT_FAMILY, size=13)
+    for i in range(len(capm_dict)):
+        pdf.cell(
+            w=0, h=10, txt=f"{dict_keys[i]}: \t \t \t {dict_values[i]}%", border=1)
         pdf.ln(10)
 
 
