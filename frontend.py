@@ -547,7 +547,7 @@ if export_as_pdf:
     pdf.set_font(FONT_FAMILY, size=13)
     for i in range(len(betas_dict)):
         pdf.cell(
-            w=0, h=10, txt=f"{dict_keys[i]}: \t \t \t {dict_values[i]}%", border=1)
+            w=0, h=10, txt=f"{dict_keys[i]}: \t \t \t {dict_values[i]}", border=1)
         pdf.ln(10)
     
     pdf.ln(30)
